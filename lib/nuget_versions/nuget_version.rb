@@ -49,7 +49,8 @@ module NuGetVersions
     def self.try_parse(value)
       return nil if value.nil?
 
-      value = original_value = value.to_s if !value.is_a? String
+      value = value.to_s if !value.is_a? String
+      original_value = value
 
       value = value.split("+", 2)
 
