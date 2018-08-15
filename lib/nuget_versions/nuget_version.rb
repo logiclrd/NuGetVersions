@@ -21,10 +21,14 @@ module NuGetVersions
     def initialize(major, minor, patch, revision = 0, release_labels = nil, metadata = nil)
       super(major, minor, patch, release_labels, metadata)
 
-      @revision = revision
+      @revision = Integer(revision, revision.is_a?(String) ? 10 : 0)
     end
 
     attr_reader :revision
+
+    def revision=(new_value)
+      @revision = Integer(new_value, new_value.is_a?(String) ? 10 : 0)
+    end
 
     attr_accessor :original_version
 
@@ -52,23 +56,29 @@ module NuGetVersions
       value = value.to_s if !value.is_a? String
       original_value = value
 
+      return nil if value.empty?
+
       value = value.split("+", 2)
 
       metadata = (value.length == 2) ? value.last : nil
 
       value = value.first.split("-", 2)
 
-      release_labels = (value.length == 2) ? value.last : nil
+      return nil if value.empty?
+
+      release_labels = (value.length == 2) ? value.last.split('.') : nil
 
       parts = value.first.split(".")
 
-      return nil if value.length > 4
+      return nil if parts.length < 2 || parts.length > 4
+      return nil if release_labels && !SemanticVersion.try_validate_identifiers(release_labels)
+      return nil if metadata && !SemanticVersion.try_validate_identifier(metadata)
 
       begin
-        major = Integer(parts[0])
-        minor = (parts.length >= 2) ? Integer(parts[1]) : 0
-        patch = (parts.length >= 3) ? Integer(parts[2]) : 0
-        revision = (parts.length >= 4) ? Integer(parts[3]) : 0
+        major = Integer(parts[0], 10)
+        minor = (parts.length >= 2) ? Integer(parts[1], 10) : 0
+        patch = (parts.length >= 3) ? Integer(parts[2], 10) : 0
+        revision = (parts.length >= 4) ? Integer(parts[3], 10) : 0
       rescue
         return nil
       end

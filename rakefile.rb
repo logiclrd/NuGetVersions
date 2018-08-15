@@ -5,5 +5,5 @@ task :build do
 end
 
 task :release => :build do
-  system "gem push nuget_versions-#{File.read("VERSION").strip}"
+  system "gem push nuget_versions-#{File.read("VERSION").strip}.gem"
 end

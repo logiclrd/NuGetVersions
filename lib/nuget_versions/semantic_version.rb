@@ -17,15 +17,17 @@ module NuGetVersions
     # - release_labels: Prerelease label
     # - metadata: Build metadata
     def initialize(major, minor, patch, release_labels = nil, metadata = nil)
-      @major = major
-      @minor = minor
-      @patch = patch
+      @major = Integer(major, major.is_a?(String) ? 10 : 0)
+      @minor = Integer(minor, minor.is_a?(String) ? 10 : 0)
+      @patch = Integer(patch, patch.is_a?(String) ? 10 : 0)
 
       if !release_labels.nil?
         release_labels = release_labels.to_s.split('.') if !release_labels.kind_of? Array
+        SemanticVersion.validate_identifiers release_labels
         @release_labels = release_labels
       end
 
+      SemanticVersion.validate_identifier metadata if !metadata.nil?
       @metadata = metadata
     end
 
@@ -35,9 +37,41 @@ module NuGetVersions
     attr_reader :release_labels
     attr_reader :metadata
 
+    def major=(new_value)
+      @major = Integer(new_value, new_value.is_a?(String) ? 10 : 0)
+    end
+
+    def minor=(new_value)
+      @minor = Integer(new_value, new_value.is_a?(String) ? 10 : 0)
+    end
+
+    def patch=(new_value)
+      @patch = Integer(new_value, new_value.is_a?(String) ? 10 : 0)
+    end
+
+    def release_labels=(new_value)
+      return @release_labels = nil if new_value.nil?
+      new_value = new_value.to_s.split('.') if !new_value.kind_of? Array
+      SemanticVersion.validate_identifiers new_value
+      @release_labels = new_value
+    end
+
+    def metadata=(new_value)
+      return @metadata = nil if new_value.nil?
+      SemanticVersion.validate_identifier new_value
+      @metadata = new_value
+    end
+
     def release
-      return "" if @release_labels.nil?
+      return nil if @release_labels.nil?
       @release_labels.join('.')
+    end
+
+    def release=(new_value)
+      return @release_labels = nil if new_value.nil?
+      new_value = new_value.split('.')
+      SemanticVersion.validate_identifiers new_value
+      @release_labels = new_value
     end
 
     def is_prerelease?
@@ -96,27 +130,50 @@ module NuGetVersions
 
       value = value.to_s if !value.is_a? String
 
+      return nil if value.empty?
+
       value = value.split("+", 2)
 
       metadata = (value.length == 2) ? value.last : nil
 
       value = value.first.split("-", 2)
 
-      release_labels = (value.length == 2) ? value.last : nil
+      return nil if value.empty?
+
+      release_labels = (value.length == 2) ? value.last.split('.') : nil
 
       parts = value.first.split(".")
 
-      return nil if value.length > 3
+      return nil if parts.length != 3
+      return nil if release_labels && !SemanticVersion.try_validate_identifiers(release_labels)
+      return nil if metadata && !SemanticVersion.try_validate_identifier(metadata)
 
       begin
-        major = Integer(parts[0])
-        minor = (parts.length >= 2) ? Integer(parts[1]) : 0
-        patch = (parts.length >= 3) ? Integer(parts[2]) : 0
+        major = Integer(parts[0], 10)
+        minor = (parts.length >= 2) ? Integer(parts[1], 10) : 0
+        patch = (parts.length >= 3) ? Integer(parts[2], 10) : 0
       rescue
         return nil
       end
 
       return SemanticVersion.new(major, minor, patch, release_labels, metadata)
+    end
+
+  protected
+    def self.validate_identifiers(array)
+      array.each { |identifier| validate_identifier(identifier) }
+    end
+
+    def self.validate_identifier(identifier)
+      raise "Invalid semantic version identifier: #{identifier}" if !try_validate_identifier(identifier)
+    end
+
+    def self.try_validate_identifiers(array)
+      array.all? { |identifier| try_validate_identifier(identifier) }
+    end
+
+    def self.try_validate_identifier(identifier)
+      return identifier.count("^A-Za-z0-9-").zero?
     end
   end
 end
