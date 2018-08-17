@@ -161,6 +161,18 @@ class NuGetVersionTests < Test::Unit::TestCase
     refute_empty(strings.select { |str| NuGetVersion.copy_of(NuGetVersion.parse(str)).to_s != str })
   end
 
+  def test_original_version_after_mutation
+    # Arrange
+    versions = mutation_tests.map { |str| NuGetVersion.parse(str) }
+
+    # Act & Assert
+    versions.each do |ver|
+      refute_nil(ver.original_version)
+      mutate_version(ver)
+      assert_nil(ver.original_version)
+    end
+  end
+
   def test_to_s
     # Arrange
     strings =
@@ -176,6 +188,22 @@ class NuGetVersionTests < Test::Unit::TestCase
 
     # Act & Assert
     strings.each { |str| assert_equal(str, NuGetVersion.parse(str).to_s) }
+  end
+
+  def test_to_s_after_mutation
+    # Arrange
+    versions = mutation_tests.map { |str| NuGetVersion.parse(str) }
+
+    # Act & Assert
+    versions.each do |ver|
+      copy = NuGetVersion.copy_of(ver)
+      assert_nil(copy.original_version)
+
+      mutate_version(ver)
+      mutate_version(copy)
+
+      assert_equal(copy.to_s, ver.to_s)
+    end
   end
 
   def test_equals
@@ -425,6 +453,47 @@ private
       { :f => "-test.1" },
       { :f => "+build.2" }
     ]
+  end
+
+  def mutation_tests
+    # 99 marks the component to be mutated
+    [
+      "99.2.3",
+      "1.99.3",
+      "1.2.99",
+      "99.2.3.4",
+      "1.99.3.4",
+      "1.2.99.4",
+      "1.2.3.99",
+      "99.6.7-label.9",
+      "5.99.7-label.9",
+      "5.6.99-label.9",
+      "5.6.7-label.99",
+      "99.6.7.0-label.9",
+      "5.99.7.0-label.9",
+      "5.6.99.0-label.9",
+      "5.6.7.99-label.9",
+      "5.6.7.0-label.99",
+      "99.11.12+build13",
+      "10.99.12+build13",
+      "10.11.99+build13",
+      "10.11.12+build99",
+      "99.15.16.17-label.18+build19",
+      "14.99.16.17-label.18+build19",
+      "14.15.99.17-label.18+build19",
+      "14.15.16.99-label.18+build19",
+      "14.15.16.17-label.99+build19",
+      "14.15.16.17-label.18+build99"
+    ]
+  end
+
+  def mutate_version(ver)
+    ver.major += 1 if ver.major == 99
+    ver.minor += 1 if ver.minor == 99
+    ver.patch += 1 if ver.patch == 99
+    ver.revision += 1 if ver.revision == 99
+    ver.release_labels[1] = (1 + ver.release_labels[1].to_i).to_s if !ver.release_labels.nil? && (ver.release_labels.length >= 2) && (ver.release_labels[1].to_i == 99)
+    ver.metadata = "build#{1 + ver.metadata[5..-1].to_i}" if !ver.metadata.nil? && ver.metadata.start_with?("build") && (ver.metadata[5..-1].to_i == 99)
   end
 end
 

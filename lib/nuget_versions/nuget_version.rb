@@ -26,13 +26,49 @@ module NuGetVersions
 
     attr_reader :revision
 
-    def revision=(new_value)
-      @revision = Integer(new_value, new_value.is_a?(String) ? 10 : 0)
+    def major=(new_value)
+      super(new_value)
+      @original_version = nil
     end
 
-    attr_accessor :original_version
+    def minor=(new_value)
+      super(new_value)
+      @original_version = nil
+    end
+
+    def patch=(new_value)
+      super(new_value)
+      @original_version = nil
+    end
+
+    def revision=(new_value)
+      @revision = Integer(new_value, new_value.is_a?(String) ? 10 : 0)
+      @original_version = nil
+    end
+
+    def release_labels=(new_value)
+      super(new_value)
+      @original_version = nil
+    end
+
+    def metadata=(new_value)
+      super(new_value)
+      @original_version = nil
+    end
+
+    def release=(new_value)
+      super(new_value)
+      @original_version = nil
+    end
+
+    def original_version
+      @original_version = nil if !@original_version.nil? && (release != @original_release)
+      @original_version
+    end
 
     def to_s
+      original_version # Test if the release labels array has been mutated
+
       return @original_version if !@original_version.nil? && !@original_version.empty?
 
       version = "#{@major}.#{@minor}.#{@patch}"
@@ -84,7 +120,8 @@ module NuGetVersions
       end
 
       ver = NuGetVersion.new(major, minor, patch, revision, release_labels, metadata)
-      ver.original_version = original_value
+      ver.instance_variable_set("@original_version", original_value)
+      ver.instance_variable_set("@original_release", ver.release)
 
       ver
     end
