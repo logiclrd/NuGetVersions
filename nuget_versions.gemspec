@@ -14,7 +14,7 @@ Gem::Specification.new do |spec|
   spec.homepage = "https://github.com/logiclrd/NuGetVersions"
   spec.summary = "NuGet Version Library"
   spec.description = "Provides facilities for parsing & working with NuGet Versions, which are a superset of Semantic Versions 2.0."
-  spec.required_rubygems_version = "~> 2.0"
+  spec.required_rubygems_version = ">= 2.0"
   spec.files = Dir.glob("lib/**/*") + %w(README.md)
   spec.require_path = "lib"
 
